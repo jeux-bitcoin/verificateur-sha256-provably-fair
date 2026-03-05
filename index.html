@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérificateur SHA-256 Provably Fair — Jeux-Bitcoin.com</title>
+    <meta name="description" content="Outil gratuit et open-source pour vérifier l'équité des jeux de casino crypto. Vérifiez le hash SHA-256 du server seed et recalculez les résultats HMAC.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e1a;
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 700px; width: 100%; }
+        h1 {
+            text-align: center;
+            margin: 20px 0 5px;
+            color: #f5a623;
+            font-size: 1.8em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #8b949e;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+        .subtitle a { color: #f5a623; text-decoration: none; }
+        .subtitle a:hover { text-decoration: underline; }
+        .card {
+            background: #141926;
+            border: 1px solid #2a2f42;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: #f5a623;
+            font-size: 1.1em;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2f42;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #8b949e;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+        label:first-of-type { margin-top: 0; }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0a0e1a;
+            border: 1px solid #2a2f42;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 1em;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+        input:focus { outline: none; border-color: #f5a623; }
+        button.verify-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #f5a623;
+            border: none;
+            border-radius: 6px;
+            color: #0a0e1a;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.verify-btn:hover { background: #e0951e; }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #0a0e1a;
+            border: 1px solid #2a2f42;
+            border-radius: 6px;
+            display: none;
+        }
+        .result-box.show { display: block; }
+        .result-label {
+            font-size: 0.8em;
+            color: #8b949e;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .result-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.95em;
+            color: #f5a623;
+            word-break: break-all;
+            margin-bottom: 15px;
+            padding: 8px;
+            background: #141926;
+            border-radius: 4px;
+        }
+        .hash-match {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hash-match.valid { background: #0d2818; color: #3fb950; border: 1px solid #238636; }
+        .hash-match.invalid { background: #2d1117; color: #f85149; border: 1px solid #da3633; }
+        .info {
+            margin-top: 20px;
+            font-size: 0.85em;
+            color: #8b949e;
+            line-height: 1.6;
+        }
+        .info a { color: #f5a623; text-decoration: none; }
+        .info a:hover { text-decoration: underline; }
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+            padding: 20px;
+        }
+        footer a { color: #f5a623; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+        .divider { margin: 20px 0; border-top: 1px solid #2a2f42; }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Vérificateur SHA-256</h1>
+        <p class="subtitle">Outil open-source par <a href="https://jeux-bitcoin.com" target="_blank" rel="noopener">Jeux-Bitcoin.com</a> — <a href="https://jeux-bitcoin.com/provably-fair/" target="_blank" rel="noopener">Comprendre le Provably Fair</a></p>
+
+        <div class="card">
+            <div class="section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                Vérification de l'intégrité du Server Seed
+            </div>
+
+            <label for="serverSeed">Server Seed (révélé après la partie)</label>
+            <input type="text" id="serverSeed" placeholder="Collez le server seed en clair ici">
+
+            <label for="expectedHash">Hash SHA-256 attendu (affiché avant la partie)</label>
+            <input type="text" id="expectedHash" placeholder="Collez le hash que le casino vous a montré avant de miser">
+
+            <button class="verify-btn" onclick="verifySeed()">🔍 Vérifier l'intégrité</button>
+
+            <div class="result-box" id="seedResultBox">
+                <div id="seedMatchResult"></div>
+                <div class="result-label">Hash SHA-256 calculé du Server Seed</div>
+                <div class="result-value" id="calculatedHash"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                Recalcul HMAC-SHA256 du résultat
+            </div>
+
+            <label for="hmacServerSeed">Server Seed</label>
+            <input type="text" id="hmacServerSeed" placeholder="Le server seed révélé">
+
+            <label for="clientSeed">Client Seed (votre graine)</label>
+            <input type="text" id="clientSeed" placeholder="Votre client seed">
+
+            <label for="nonce">Nonce (numéro de la mise)</label>
+            <input type="number" id="nonce" value="0" min="0">
+
+            <button class="verify-btn" onclick="calcHMAC()">⚙️ Calculer le résultat</button>
+
+            <div class="result-box" id="hmacResultBox">
+                <div class="result-label">Sortie HMAC-SHA256</div>
+                <div class="result-value" id="hmacOutput"></div>
+                <div class="result-label">Valeur décimale (8 premiers caractères hex)</div>
+                <div class="result-value" id="decimalOutput"></div>
+                <div class="result-label">Flottant (0 à 1)</div>
+                <div class="result-value" id="floatOutput"></div>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>Mode d'emploi :</strong> Après une partie, le casino révèle le server seed. Collez-le dans la première section avec le hash affiché avant votre mise pour vérifier que le casino n'a pas changé de seed. Utilisez la deuxième section pour recalculer le résultat HMAC et vérifier qu'il correspond au résultat de votre partie.<br><br>
+            <strong>En savoir plus :</strong> <a href="https://jeux-bitcoin.com/provably-fair/" target="_blank" rel="noopener">Guide complet du Provably Fair</a> ·
+            <a href="https://github.com/jeux-bitcoin/verificateur-sha256-provably-fair" target="_blank" rel="noopener">Code source sur GitHub</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>Outil open-source — <a href="https://github.com/jeux-bitcoin/verificateur-sha256-provably-fair">Voir sur GitHub</a> — Licence MIT</p>
+        <p style="margin-top:8px;">Développé par <a href="https://jeux-bitcoin.com">Jeux-Bitcoin.com</a> — Guide indépendant des casinos crypto 🇫🇷</p>
+    </footer>
+
+    <script>
+    async function sha256(message) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function hmacSHA256(key, message) {
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(key);
+        const msgData = encoder.encode(message);
+        const cryptoKey = await crypto.subtle.importKey(
+            'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const signature = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+        return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function verifySeed() {
+        const serverSeed = document.getElementById('serverSeed').value.trim();
+        const expectedHash = document.getElementById('expectedHash').value.trim().toLowerCase();
+
+        if (!serverSeed) {
+            alert('Veuillez entrer le server seed');
+            return;
+        }
+
+        const calculatedHash = await sha256(serverSeed);
+        document.getElementById('calculatedHash').textContent = calculatedHash;
+
+        let matchHTML = '';
+        if (expectedHash) {
+            if (calculatedHash === expectedHash) {
+                matchHTML = '<div class="hash-match valid"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Les hash correspondent. Le seed est authentique.</div>';
+            } else {
+                matchHTML = '<div class="hash-match invalid"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f85149" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Les hash ne correspondent PAS. Le seed a peut-être été modifié.</div>';
+            }
+        } else {
+            matchHTML = '<div style="color:#8b949e;font-size:0.9em;margin-bottom:15px;">Collez le hash attendu dans le champ ci-dessus pour comparer automatiquement.</div>';
+        }
+
+        document.getElementById('seedMatchResult').innerHTML = matchHTML;
+        document.getElementById('seedResultBox').classList.add('show');
+    }
+
+    async function calcHMAC() {
+        const serverSeed = document.getElementById('hmacServerSeed').value.trim();
+        const clientSeed = document.getElementById('clientSeed').value.trim();
+        const nonce = document.getElementById('nonce').value.trim();
+
+        if (!serverSeed || !clientSeed) {
+            alert('Veuillez entrer le server seed et le client seed');
+            return;
+        }
+
+        const message = clientSeed + ':' + nonce;
+        const hmac = await hmacSHA256(serverSeed, message);
+
+        const hexSegment = hmac.substring(0, 8);
+        const decimalValue = parseInt(hexSegment, 16);
+        const floatValue = decimalValue / 4294967295;
+
+        document.getElementById('hmacOutput').textContent = hmac;
+        document.getElementById('decimalOutput').textContent = decimalValue.toLocaleString('fr-FR') + '  (0x' + hexSegment + ')';
+        document.getElementById('floatOutput').textContent = floatValue.toFixed(10);
+
+        document.getElementById('hmacResultBox').classList.add('show');
+    }
+    </script>
+</body>
+</html>
